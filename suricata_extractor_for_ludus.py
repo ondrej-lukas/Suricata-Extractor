@@ -157,6 +157,21 @@ class TimeWindow(object):
         json_result = json.dumps(data)
         return json_result
 
+    def get_data_as_dict(self):
+        data = {}
+        data["Alerts Categories"] = self.categories
+        data["# Uniq Signatures"] = len(self.signatures)
+        data["# Severity 1"] = self.severities[self.severities.keys()[0]]
+        data["# Severity 2"] = self.severities[self.severities.keys()[1]]
+        data["# Severity 3"] = self.severities[self.severities.keys()[2]]
+        data["# Severity 4"] = self.severities[self.severities.keys()[3]]
+        data["Alerts/DstPort"] = self.dst_ports
+        data["Alerts/SrcPort"] = self.src_ports
+        data["Alerts/SrcIP"] = self.src_ips
+        data["Alers/DstIP"] = self.dst_ips
+        data["Per SrcPort"] = self.src_ports
+        return data
+
     def count_port_combinations(self):
         """
         Compute the amount of attackers attacking each port combination on each dst ip
@@ -332,4 +347,4 @@ class Extractor(object):
                 counter+=1
         self.line_number += counter
         print "Number of processed lines:{}".format(counter)
-        return self.timewindow.get_json()
+        return self.timewindow.get_data_as_dict()
