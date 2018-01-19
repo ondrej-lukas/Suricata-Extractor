@@ -1,6 +1,7 @@
 #!/usr/bin/python -u
 # See the file 'LICENSE' for copying permission.
-# Author: Sebastian Garcia. eldraco@gmail.com , sebastian.garcia@agents.fel.cvut.cz
+# Authors:  Sebastian Garcia. eldraco@gmail.com , sebastian.garcia@agents.fel.cvut.cz
+#           Ondrej Lukas. ondrej.lukas95@gmail.com
 
 import sys
 from datetime import datetime
@@ -10,8 +11,6 @@ import time
 from os.path import isfile, join
 import json
 from pprint import pprint
-#import matplotlib.pyplot as plt
-#import matplotlib.patches as mpatches
 import math
 from multiprocessing import Queue
 import multiprocessing
@@ -19,26 +18,9 @@ from itertools import islice
 version = '0.3.2'
 
 
-# Changelog
-# 0.3.1
-#  Output information for each combination of ports accessed by each uniq attacker
-# 0.3.1:
-#  Delete the export in csv
-#  Only suricata categories with data is exported in the json
-#  Export in json
-#  Add summary of alerts per dst port
-# 0.3: 
-#  Fix the Unknown category in the csv
-# 0.2: 
-#  Generate the csv
-#  Plot the data
-#  Generate an image file
-
 timewindows = {}
 timeStampFormat = '%Y-%m-%dT%H:%M:%S.%f'
-categories = {'Not Suspicious Traffic':[], 'Unknown Traffic':[], 'Potentially Bad Traffic':[], 'Attempted Information Leak':[], 'Information Leak':[], 'Large Scale Information Leak':[], 'Attempted Denial of Service':[], 'Denial of Service':[], 'Attempted User Privilege Gain':[], 'Unsuccessful User Privilege Gain':[], 'Successful User Privilege Gain':[], 'Attempted Administrator Privilege Gain':[], 'Successful Administrator Privilege Gain':[], 'Decode of an RPC Query':[], 'Executable Code was Detected':[], 'A Suspicious String was Detected':[], 'A Suspicious Filename was Detected':[], 'An Attempted Login Using a Suspicious Username was Detected':[], 'A System Call was Detected':[], 'A TCP Connection was Detected':[], 'A Network Trojan was Detected':[], 'A Client was Using an Unusual Port':[], 'Detection of a Network Scan':[], 'Detection of a Denial of Service Attack':[], 'Detection of a Non-Standard Protocol or Event':[], 'Generic Protocol Command Decode':[], 'Access to a Potentially Vulnerable Web Application':[], 'Web Application Attack':[], 'Misc activity':[], 'Misc Attack':[], 'Generic ICMP event':[], 'Inappropriate Content was Detected':[], 'Potential Corporate Privacy Violation':[], 'Attempt to Login By a Default Username and Password':[]}
-colors = ['#d6d6f5','#7070db','#24248f','#ffccff','#ff1aff','#990099','#ffb3d1','#ff0066','#99003d','#ffe6b3','#ffcc66','#ffaa00','#ffffb3','#ffff00','#cccc00','#d9ffb3','#99ff33','#66cc00','#c6ecd9','#66cc99','#2d8659','#c2f0f0','#47d1d1','#248f8f','#b3f0ff','#00ccff','#008fb3','#b3ccff','#6699ff','#004de6','#ffccff','#ff66ff','#b300b3','#ffb3d1']
-
+categories = {"Not Suspicious Traffic":[], "Unknown Traffic":[], "Potentially Bad Traffic":[], "Attempted Information Leak":[], "Information Leak":[], "Large Scale Information Leak":[], "Attempted Denial of Service":[], "Denial of Service":[], "Attempted User Privilege Gain":[], "Unsuccessful User Privilege Gain":[], "Successful User Privilege Gain":[], "Attempted Administrator Privilege Gain":[], "Successful Administrator Privilege Gain":[], "Decode of an RPC Query":[], "Executable Code was Detected":[], "A Suspicious String was Detected":[], "A Suspicious Filename was Detected":[], "An Attempted Login Using a Suspicious Username was Detected":[], "A System Call was Detected":[], "A TCP Connection was Detected":[], "A Network Trojan was Detected":[], "A Client was Using an Unusual Port":[], "Detection of a Network Scan":[], "Detection of a Denial of Service Attack":[], "Detection of a Non-Standard Protocol or Event":[], "Generic Protocol Command Decode":[], "Access to a Potentially Vulnerable Web Application":[], "Web Application Attack":[], "Misc activity":[], "Misc Attack":[], "Generic ICMP event":[], "Inappropriate Content was Detected":[], "Potential Corporate Privacy Violation":[], "Attempt to Login By a Default Username and Password":[]}
 
 ###################
 # TimeWindow
@@ -85,9 +67,9 @@ class TimeWindow(object):
         # Categories
         if category == '':
             try:
-                self.categories['Unknown Traffic'] += 1
+                self.categories["Unknown Traffic"] += 1
             except KeyError:
-                self.categories['Unknown Traffic'] = 1
+                self.categories["Unknown Traffic"] = 1
         else:
             try:
                 self.categories[category] += 1
@@ -160,17 +142,17 @@ class TimeWindow(object):
         Returns the json representation of the data in this time window
         """
         data = {}
-        data['Alerts Categories'] = self.categories
-        data['# Uniq Signatures'] = len(self.signatures)
-        data['# Severity 1'] = self.severities[self.severities.keys()[0]]
-        data['# Severity 2'] = self.severities[self.severities.keys()[1]]
-        data['# Severity 3'] = self.severities[self.severities.keys()[2]]
-        data['# Severity 4'] = self.severities[self.severities.keys()[3]]
-        data['Alerts/DstPort'] = self.dst_ports
-        #data['Alerts/SrcPort'] = self.src_ports
-        data['Alerts/SrcIP'] = self.src_ips
-        data['Alers/DstIP'] = self.dst_ips
-        data['Per SrcPort'] = self.src_ports
+        data["Alerts Categories"] = self.categories
+        data["# Uniq Signatures"] = len(self.signatures)
+        data["# Severity 1"] = self.severities[self.severities.keys()[0]]
+        data["# Severity 2"] = self.severities[self.severities.keys()[1]]
+        data["# Severity 3"] = self.severities[self.severities.keys()[2]]
+        data["# Severity 4"] = self.severities[self.severities.keys()[3]]
+        data["Alerts/DstPort"] = self.dst_ports
+        data["Alerts/SrcPort"] = self.src_ports
+        data["Alerts/SrcIP"] = self.src_ips
+        data["Alers/DstIP"] = self.dst_ips
+        data["Per SrcPort"] = self.src_ports
         #data['port_combinations'] = self.get_port_combination_lines
         json_result = json.dumps(data)
         return json_result
@@ -207,7 +189,6 @@ class TimeWindow(object):
 
     def printit(self):
         print 'TW: {}. #Categories: {}. #Signatures: {}. #SrcIp: {}. #DstIP: {}. #Severities: 1:{}, 2:{}, 3:{}, 4:{}'.format(str(self.start), len(self.categories), len(self.signatures), len(self.src_ips), len(self.dst_ips), self.severities[self.severities.keys()[0]], self.severities[self.severities.keys()[1]], self.severities[self.severities.keys()[2]], self.severities[self.severities.keys()[3]])
-
 
 def roundTime(dt=None, date_delta=timedelta(minutes=1), to='average'):
     """
@@ -265,20 +246,14 @@ def summarize_ports():
         summary_port_file.write(str(srcip) + ': ' + str(port_summary[srcip]) + '\n')
     summary_port_file.close()
 
-
-
 class Extractor(object):
-    """TODO: Documentation"""
+    """Class for extracting information and alerts from suricata outptu file eve.json"""
 
     def __init__(self, filename=None):
         self.tw_archive = {}
         self.timewindow = None
-        self.line_number =0
-        """if filename:
-            self.source = open(filename)
-            self.from_file = True
-        else:
-            self.source = sys.stdin"""
+        self.line_number = 0
+        self.file = "/root/var/log/suricata/eve.json"
 
     def process_line(self, line, timewindow):
         """
@@ -286,9 +261,9 @@ class Extractor(object):
         """
         json_line = json.loads(line)
         #check if we are in the timewindow
-        line_timestamp = datetime.strptime(json_line['timestamp'].split('+')[0], timeStampFormat)
+        line_timestamp = datetime.strptime(json_line["timestamp"].split('+')[0], timeStampFormat)
         if line_timestamp > timewindow.start and line_timestamp <= timewindow.end:
-            if 'alert' not in json_line['event_type'] and 'flow' not in json_line['event_type']:
+            if "alert" not in json_line["event_type"] and "flow" not in json_line["event_type"]:
                 return False
             """
             if args.dstnet and args.dstnet not in json_line['dest_ip']:
@@ -296,19 +271,19 @@ class Extractor(object):
             """
             # forget the timezone for now with split
             try:
-                col_time = json_line['timestamp'].split('+')[0]
+                col_time = json_line["timestamp"].split('+')[0]
             except KeyError:
                 col_time = ''
             try:
-                col_category = json_line['alert']['category']
+                col_category = json_line["alert"]["category"]
             except KeyError:
                 col_category = ''
             try:
-                col_severity = json_line['alert']['severity']
+                col_severity = json_line["alert"]["severity"]
             except KeyError:
                 col_severity = ''
             try:
-                col_signature = json_line['alert']['signature']
+                col_signature = json_line["alert"]['signature']
             except KeyError:
                 col_signature = ''
             try:
@@ -329,119 +304,32 @@ class Extractor(object):
                 col_dstport = ''
 
             # Get the time window object
-            if 'alert' in json_line['event_type']:
+            if 'alert' in json_line["event_type"]:
                 timewindow.add_alert(col_category, col_severity, col_signature, col_srcip, col_dstip, col_srcport, col_dstport)
-            elif 'flow' in json_line['event_type']:
+            elif 'flow' in json_line["event_type"]:
                 try:
-                    col_proto = json_line['proto']
+                    col_proto = json_line["proto"]
                 except KeyError:
                     col_proto = ''
                 try:
-                    col_bytes_toserver = json_line['flow']['bytes_toserver']
+                    col_bytes_toserver = json_line["flow"]["bytes_toserver"]
                 except KeyError:
                     col_bytes_toserver = ''
                 try:
-                    col_bytes_toclient = json_line['flow']['bytes_toclient']
+                    col_bytes_toclient = json_line["flow"]["bytes_toclient"]
                 except KeyError:
                     col_bytes_toclient = ''
                 timewindow.add_flow(col_srcip, col_dstip, col_srcport, col_dstport, col_proto, col_bytes_toserver, col_bytes_toclient)
                 
     def get_data(self, tw_start, tw_end):
         self.timewindow = TimeWindow(tw_start,tw_end)
-        """self.source = open("/root/var/log/suricata/eve.json")
-        for line in self.source:
-            print line
-            self.process_line(line,self.timewindow)"""
+        #Check if there is a better way of iterate through file
         counter = 0;
         print "Starting at line:{}".format(self.line_number)
-        with open("/root/var/log/suricata/eve.json") as lines:
+        with open(self.file) as lines:
             for line in islice(lines, self.line_number, None): #skip the lines we already inspected
                 self.process_line(line,self.timewindow)
                 counter+=1
         self.line_number += counter
         print "Number of processed lines:{}".format(counter)
         return self.timewindow.get_json()
-    #there must be a better solution than to iterate
-
-####################
-# Main
-####################
-if __name__ == '__main__':  
-    print 'Suricata Extractor. Version {} (https://stratosphereips.org)'.format(version)
-    print
-
-    """# Parse the parameters
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '--verbose', help='Amount of verbosity. This shows more info about the results.', action='store', required=False, type=int, default=1)
-    parser.add_argument('-e', '--debug', help='Amount of debugging. This shows inner information about the flows.', action='store', required=False, type=int, default=0)
-    parser.add_argument('-f', '--file', help='Suricata eve.json file.', action='store', required=False)
-    #parser.add_argument('-w', '--width', help='Width of the time window to process. In minutes.', action='store', required=False, type=int, default=60)
-    #parser.add_argument('-d', '--dstnet', help='Destination net to monitor. Ex: 192.168 to search everything attacking 192.168.0.0/16 network', action='store', required=False)
-    #parser.add_argument('-p', '--plot', help='Plot the data in an active window.', action='store_true', required=False)
-    #parser.add_argument('-P', '--plotfile', help='Store the plot in this file. Extension can be .eps, .png or .pdf. I suggest eps for higher resolution', action='store', type=str, required=False)
-    #parser.add_argument('-l', '--log', help='Plot in a logarithmic scale', action='store_true', required=False)
-    #parser.add_argument('-j', '--json', help='Json file name to output data in the timewindow in json format. Much less columns outputed.', action='store', type=str, required=False)
-    parser.add_argument('-o', '--ports', help='Compute information about the usage of ports by the attackers. For each combination of ports, count how many unique IPs connected to them. You need also to select JSON output. The results are stored in a file with the same name as the JSON file but with extension .ports', action='store_true', required=False)
-    #parser.add_argument('-b', '--bandwidth', help='Compute the bandwidth consumption for the given set of ports. Ports numbers should be separated by comma. Only TCP ports supported. Bandwidth is computed in megabits per second on each timewindow, and then it is averaged at the end. The results per time window are included in the json file (so is mandatory to opt it) and the general final values are reported in a file with extension .bandwidth.', action='store_true', required=False)
-    f = parser.parse_args()
-
-    # Get the verbosity, if it was not specified as a parameter 
-    if args.verbose < 1:
-        args.verbose = 1
-
-    # Limit any debuggisity to > 0
-    if args.debug < 0:
-        args.debug = 0
-
-    # Json
-    if args.json:
-        jsonfile = open(args.json, 'w')
-
-    if args.ports:
-        portsfilename = '.'.join(args.json.split('.')[:-1]) + '.ports'
-        portsfile = open(portsfilename, 'w')
-
-    Extractor e = Extractor(queue, args.address, args.port)
-    
-    #current_tw = ''
-    try:
-        if args.file:
-            if args.verbose > 1:
-                print 'Working with the file {} as parameter'.format(args.file)
-            f = open(args.file)
-            line = f.readline()
-            while line:
-                queue.put(line)
-                line = f.readline()
-            f.close()
-        else:
-            while True:
-                line = sys.stdin.readline()
-                queue.put(line)
-    except KeyboardInterrupt:
-        # Do the final things
-        print "\nLeaving Suricata Extractor"
-        pass
-
-    if args.json:
-        jsonfile.close()
-
-    ## Print last tw
-    try:
-        timestamp = datetime.strptime(current_tw.start_time, timeStampFormat)
-        round_down_timestamp = roundTime(timestamp,timedelta(minutes=args.width), 'down')
-        str_round_down_timestamp = round_down_timestamp.strftime(timeStampFormat)
-        output_tw(str_round_down_timestamp)
-    except AttributeError:
-        print 'Not a final time window? Some error?'
-
-    # Close files
-    if args.json:
-        jsonfile.close()
-
-
-    if args.ports:
-        # Here we do the final summary of ports in the complete file
-        summarize_ports()
-        portsfile.close()
-"""
